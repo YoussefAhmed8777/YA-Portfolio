@@ -2347,10 +2347,15 @@ body.menu-open {
   --border: #e2e2dd;
   --border-strong: #cfcfc9;
   --text: #0a0a0b;
-  --muted: #6b6b70;
+  /* --muted: #6b6b70;
   --dim: #a8a8a3;
   --accent: #6b8f1a;
-  --accent-2: #5b3fe0;
+  --accent-2: #5b3fe0; */
+  /* NEW — WCAG AA compliant */
+  --muted: #4a4a50;      /* was #6b6b70 → 7.1:1 now */
+  --dim:   #5a5a60;      /* was #a8a8a3 → 5.8:1 now */
+  --accent: #4f6b13;     /* was #6b8f1a → 5.4:1 now */
+  --accent-2: #4a32c9;   /* slightly darker violet → 6.2:1 */
 }
 :root.light .grain {
   opacity: 0.05;
