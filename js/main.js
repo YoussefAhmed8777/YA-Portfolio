@@ -906,3 +906,285 @@ document.querySelectorAll("[data-copy]").forEach((el) => {
     }
   });
 });
+
+/* ============================================================
+   FOOTER SIGNATURE — pen-written along the real strokes
+   The artwork is a filled shape, so thick "pen" strokes along the
+   centre-line of every letter sit in an SVG mask; revealing them in
+   writing order shows the real art. The pen speeds up on straights
+   and slows through curves, retraces quickly over finished ink, and
+   the last stroke is a fast swash. Fresh ink is accent-coloured and
+   dries into the text colour a moment behind the nib.
+============================================================ */
+(function initFooterSignature() {
+  const signature = document.getElementById("footerSignature");
+  const wet = document.getElementById("signatureWet");
+  const dry = document.getElementById("signatureDry");
+  const penDry = document.getElementById("signaturePenDry");
+  const nib = document.getElementById("signatureNib");
+  const spark = document.getElementById("signatureSpark");
+  const wetPaths = signature
+    ? Array.from(signature.querySelectorAll("#signatureMask .signature-pen path"))
+    : [];
+
+  if (!signature || !wet || !dry || !penDry || !nib || !wetPaths.length) return;
+
+  // Reduced motion: leave it fully drawn (default state), no replay
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const TOTAL_MS = 5600;  // pen-down time, first stroke to swash landing
+  const SETTLE_MS = 600;  // wet ink drying after the swash lands
+  const PRE_UNIT = 8;     // pause cost per data-pre unit (tiny dwell at tips)
+  const DRY_LAG = 150;    // how far behind the nib the ink dries (cost units)
+  const NIB_FOLLOW = 0.45; // 0-1, lower = floatier nib
+  const TRAIL_STEP = 1;   // frames between trail dots
+
+  const trail = Array.from(nib.querySelectorAll(".signature-nib__trail"));
+  const nibParts = [
+    ...trail,
+    ...nib.querySelectorAll(".signature-nib__halo, .signature-nib__core"),
+  ];
+
+  // Second (lagging) copy of the pen strokes for the dry-ink mask
+  const dryPaths = wetPaths.map((p) => {
+    const c = p.cloneNode(false);
+    penDry.appendChild(c);
+    return c;
+  });
+
+  // Blockers (see the mask in the HTML): hold back ink that sits right next
+  // to a stroke the pen is writing, until the pen reaches it
+  const blockDry = document.getElementById("signatureBlockDry");
+  const blockers = Array.from(
+    signature.querySelectorAll("#signatureMask .signature-block path")
+  ).map((el) => {
+    const dryEl = el.cloneNode(false);
+    blockDry.appendChild(dryEl);
+    return { el, dryEl, j: +el.dataset.j, frac: +el.dataset.f };
+  });
+
+  // One continuous timeline built from the chunks' data-c costs
+  let total = 0;
+  const steps = wetPaths.map((el, i) => {
+    const len = el.getTotalLength();
+    const pre = (parseFloat(el.dataset.pre) || 0) * PRE_UNIT;
+    const cost = parseFloat(el.dataset.c) || len;
+    const s = { el, dryEl: dryPaths[i], len, pre, cost, c0: total, blk: [] };
+    total += pre + cost;
+    return s;
+  });
+  blockers.forEach((b) => steps[b.j] && steps[b.j].blk.push(b));
+  const lastStep = steps[steps.length - 1];
+
+  // Soft start, then the pen picks speed up into the swash
+  const ease = (x) => 0.78 * x + 0.22 * (1 - Math.cos((Math.PI * x) / 2));
+
+  let isPlaying = false;
+  let history = [];
+  let nibPos = null;
+  let wi = 0; // first wet step not yet complete
+  let di = 0; // first dry step not yet complete
+
+  function placeNib(tip) {
+    nibPos = nibPos
+      ? {
+          x: nibPos.x + (tip.x - nibPos.x) * NIB_FOLLOW,
+          y: nibPos.y + (tip.y - nibPos.y) * NIB_FOLLOW,
+        }
+      : { x: tip.x, y: tip.y };
+    history.push({ x: nibPos.x, y: nibPos.y });
+    if (history.length > trail.length * TRAIL_STEP + 1) history.shift();
+    const last = history.length - 1;
+    nibParts.forEach((c, i) => {
+      const lag = i < trail.length ? (trail.length - i) * TRAIL_STEP : 0;
+      const p = history[Math.max(0, last - lag)];
+      c.setAttribute("transform", `translate(${p.x.toFixed(2)} ${p.y.toFixed(2)})`);
+    });
+  }
+
+  function hideAll() {
+    wetPaths.concat(dryPaths).forEach((el) => {
+      el.style.strokeDashoffset = "1";
+      el.style.visibility = "hidden"; // avoids a stray round-cap dot
+    });
+  }
+
+  function prime() {
+    hideAll();
+    blockers.forEach((b) => {
+      b.el.style.display = "";
+      b.dryEl.style.display = "";
+    });
+    wet.setAttribute("mask", "url(#signatureMask)");
+    dry.setAttribute("mask", "url(#signatureMaskDry)");
+    history = [];
+    nibPos = null;
+    wi = 0;
+    di = 0;
+    signature.classList.remove("is-drawn", "is-drawing");
+    signature.classList.add("is-ready");
+  }
+
+  // Reveal steps up to cost `c` on one layer. Returns the pen tip if mid-stroke.
+  function reveal(c, which) {
+    let tip = null;
+    let i = which === "wet" ? wi : di;
+    for (; i < steps.length; i++) {
+      const s = steps[i];
+      if (c <= s.c0) break;
+      const el = which === "wet" ? s.el : s.dryEl;
+      const x = Math.min(1, (c - s.c0 - s.pre) / s.cost);
+      if (x <= 0) {
+        if (which === "wet") tip = s.el.getPointAtLength(0); // dwell at the tip
+        break;
+      }
+      el.style.visibility = "visible";
+      el.style.strokeDashoffset = String(1 - x);
+      for (const b of s.blk) {
+        if (x >= b.frac) (which === "wet" ? b.el : b.dryEl).style.display = "none";
+      }
+      if (x < 1) {
+        if (which === "wet") tip = s.el.getPointAtLength(x * s.len);
+        break;
+      }
+    }
+    if (which === "wet") wi = i;
+    else di = i;
+    return tip;
+  }
+
+  function frame(t0, now) {
+    const elapsed = now - t0;
+    const t = Math.min(1, elapsed / TOTAL_MS);
+    const c = ease(t) * total;
+
+    const tip = reveal(c, "wet");
+    if (tip) placeNib(tip);
+
+    let cDry;
+    if (t < 1) {
+      cDry = Math.max(0, c - DRY_LAG);
+    } else {
+      // swash has landed: the wet ink dries the rest of the way
+      const k = Math.min(1, (elapsed - TOTAL_MS) / SETTLE_MS);
+      cDry = total - DRY_LAG + DRY_LAG * (k * (2 - k));
+    }
+    reveal(cDry, "dry");
+
+    if (elapsed < TOTAL_MS + SETTLE_MS) {
+      requestAnimationFrame((n) => frame(t0, n));
+    } else {
+      finish();
+    }
+  }
+
+  function finish() {
+    isPlaying = false;
+    // Pop a ring where the swash flicked off
+    const end = lastStep.el.getPointAtLength(lastStep.len);
+    spark.setAttribute("cx", end.x);
+    spark.setAttribute("cy", end.y);
+    spark.classList.remove("is-burst");
+    void spark.getBoundingClientRect();
+    spark.classList.add("is-burst");
+
+    signature.classList.remove("is-ready", "is-drawing");
+    signature.classList.add("is-drawn");
+    // Fully drawn: drop the masks so the exact original artwork shows
+    wet.removeAttribute("mask");
+    dry.removeAttribute("mask");
+  }
+
+  function play() {
+    if (isPlaying) return;
+    isPlaying = true;
+    prime();
+    signature.classList.add("is-drawing");
+    requestAnimationFrame((now) => frame(now, now));
+  }
+
+  function replay() {
+    if (isPlaying || signature.classList.contains("is-erasing")) return;
+    signature.classList.add("is-erasing"); // fade the old ink out
+    setTimeout(() => {
+      signature.classList.remove("is-erasing");
+      play();
+    }, 380);
+  }
+
+  // Hidden until it's time to write
+  prime();
+
+  // Write once, when the signature is actually on screen
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      observer.disconnect();
+      setTimeout(play, 300);
+    },
+    { threshold: 0.6 }
+  );
+  observer.observe(signature);
+
+  // ---------- Easter egg: click (or Enter/Space) to replay ----------
+  // Desktop only. Delete this whole `if` block if you want it to play
+  // exactly once and never again.
+  const isTouch =
+    window.matchMedia("(hover: none)").matches || "ontouchstart" in window;
+
+  if (!isTouch) {
+    signature.setAttribute("role", "button");
+    signature.setAttribute("tabindex", "0");
+    signature.setAttribute(
+      "aria-label",
+      "Signature of Youssef Ahmed Amin. Press to replay."
+    );
+    signature.addEventListener("click", replay);
+    signature.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        replay();
+      }
+    });
+  }
+})();
+
+/* ============================================================
+   DEVICE-AWARE KEYBOARD SHORTCUT DETECTION
+   - macOS / iPad → ⌘K
+   - Windows / Linux → Ctrl K
+   - Touch-only devices → hide the shortcut chip
+============================================================ */
+(function detectKeyboard() {
+  const keyEl = document.getElementById("terminalKey");
+  if (!keyEl) return;
+
+  // Determine platform
+  let isMac = false;
+  try {
+    // Modern API
+    if (navigator.userAgentData && navigator.userAgentData.platform) {
+      isMac = /mac/i.test(navigator.userAgentData.platform);
+    } else if (navigator.platform) {
+      // Fallback — matches MacIntel, iPhone, iPad on older Safari
+      isMac = /mac|iphone|ipad|ipod/i.test(navigator.platform);
+    }
+  } catch (e) {
+    isMac = false;
+  }
+
+  // Detect touch-only devices (no physical keyboard)
+  const isTouchOnly =
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches &&
+    !window.matchMedia("(hover: hover)").matches;
+
+  // If touch-only: hide the entire shortcut item
+  if (isTouchOnly) {
+    const row = keyEl.closest(".footer__item");
+    if (row) row.style.display = "none";
+    return;
+  }
+
+  // Otherwise set the correct key label
+  keyEl.textContent = isMac ? "⌘K" : "Ctrl K";
+})();

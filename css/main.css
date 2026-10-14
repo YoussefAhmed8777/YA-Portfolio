@@ -1544,23 +1544,288 @@ body.menu-open {
 }
 
 /* ============================================================
-   FOOTER
+   FOOTER — ARCHITECTURAL SIGNAL PANEL
 ============================================================ */
 .footer {
   max-width: var(--container);
   margin: 0 auto;
-  padding: 32px var(--pad);
+  padding: 0 var(--pad) 40px;
+}
+
+.footer__panel {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: clamp(28px, 4vw, 48px);
+  overflow: hidden;
+}
+
+/* Corner registration marks */
+.footer__corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+.footer__corner::before,
+.footer__corner::after {
+  content: "";
+  position: absolute;
+  background: var(--border-strong);
+}
+.footer__corner::before {
+  width: 100%;
+  height: 1px;
+}
+.footer__corner::after {
+  width: 1px;
+  height: 100%;
+}
+.footer__corner--tl { top: 12px; left: 12px; }
+.footer__corner--tr { top: 12px; right: 12px; }
+.footer__corner--bl { bottom: 12px; left: 12px; }
+.footer__corner--br { bottom: 12px; right: 12px; }
+
+.footer__corner--tl::before,
+.footer__corner--tl::after { top: 0; left: 0; }
+.footer__corner--tr::before,
+.footer__corner--tr::after { top: 0; right: 0; }
+.footer__corner--bl::before,
+.footer__corner--bl::after { bottom: 0; left: 0; }
+.footer__corner--br::before,
+.footer__corner--br::after { bottom: 0; right: 0; }
+
+/* Grid */
+.footer__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.4fr;
+  gap: clamp(24px, 3vw, 56px);
+}
+@media (max-width: 900px) {
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+}
+@media (max-width: 520px) {
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+/* Column */
+.footer__col {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.footer__label {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.footer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.footer__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.footer__value {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.footer__value--muted { color: var(--muted); }
+.footer__value--time {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.footer__key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Live status dot */
+.footer__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+/* NAV links */
+.footer__list--nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.25s var(--ease), padding 0.3s var(--ease);
+}
+.footer__list--nav a span {
+  color: var(--accent);
+  transition: transform 0.3s var(--ease);
+  display: inline-block;
+}
+.footer__list--nav a:hover {
+  color: var(--text);
+  padding-left: 4px;
+}
+.footer__list--nav a:hover span {
+  transform: translateX(4px);
+}
+
+/* Colophon */
+.footer__col--colophon {
+  align-items: flex-start;
+}
+.footer__text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.footer__copyright {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--dim);
-  border-top: 1px solid var(--border);
 }
-.footer__time {
+
+/* ============================================================
+  SIGNATURE — pen-written, wet ink, closing swash
+============================================================ */
+.footer__signature {
+  margin-top: 20px;
+  width: clamp(150px, 20vw, 230px); /* <- change this to resize */
+  aspect-ratio: 527 / 445;          /* matches the artwork: no layout jump */
+  color: var(--text);
+  cursor: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.92;
+  transition: opacity 0.3s var(--ease), color 0.3s var(--ease);
+}
+@media (max-width: 900px) {
+  .footer__signature { cursor: pointer; }
+}
+.footer__signature:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+.footer__signature:focus-visible {
+  outline: 1px dashed var(--accent);
+  outline-offset: 8px;
+}
+
+.signature-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  transition: opacity 0.3s var(--ease);
+}
+.footer__signature.is-erasing .signature-svg { opacity: 0; }
+
+/* Wet ink (accent) exists only while the pen is writing; it trails
+   just behind the nib and "dries" into your text colour. */
+.signature-wet { color: var(--accent); display: none; }
+.footer__signature.is-ready .signature-wet,
+.footer__signature.is-drawing .signature-wet { display: inline; }
+
+/* Mask strokes: pathLength="1" -> offset 0 = drawn, 1 = hidden.
+   JS drives the offset. */
+.signature-pen path {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 0;
+}
+
+/* Pen nib + trail */
+.signature-nib {
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+  pointer-events: none;
+}
+.footer__signature.is-drawing .signature-nib {
+  opacity: 1;
+  transition: none;
+}
+.signature-nib__trail,
+.signature-nib__core { fill: var(--accent); }
+.signature-nib__halo { fill: var(--accent-2); opacity: 0.3; }
+
+/* Ring + glow when the swash lands */
+.signature-spark {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+.signature-spark.is-burst {
+  animation: signature-spark 0.9s cubic-bezier(0.1, 0.7, 0.2, 1) 1;
+}
+@keyframes signature-spark {
+  0%   { opacity: 0.95; transform: scale(0.4); stroke-width: 4; }
+  100% { opacity: 0;    transform: scale(6.5); stroke-width: 0.5; }
+}
+.footer__signature.is-drawn .signature-svg {
+  animation: signature-settle 1.4s var(--ease) 1;
+}
+@keyframes signature-settle {
+  0%   { filter: drop-shadow(0 0 0 transparent); }
+  25%  { filter: drop-shadow(0 0 9px var(--accent)); }
+  100% { filter: drop-shadow(0 0 0 transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signature-nib,
+  .signature-spark { display: none; }
+  .signature-svg { transition: none; animation: none !important; }
+}
+
+/* Light mode */
+:root.light .footer__signature {
+  color: var(--text);
+}
+:root.light .footer__signature:hover {
   color: var(--accent);
 }
 
