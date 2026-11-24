@@ -261,16 +261,6 @@ document.querySelectorAll(".btn--primary, .nav__cta").forEach((btn) => {
   });
 });
 
-/* ============================================================
-   PARALLAX GLOW ON HERO
-============================================================ */
-window.addEventListener("mousemove", (e) => {
-  const x = (e.clientX / window.innerWidth - 0.5) * 20;
-  const y = (e.clientY / window.innerHeight - 0.5) * 20;
-  document.querySelectorAll(".mock").forEach((m) => {
-    m.style.transform = `translate(${x * 0.4}px, ${y * 0.4}px)`;
-  });
-});
 
 /* ============================================================
    BACK TO TOP — scroll-fill
@@ -324,6 +314,15 @@ const hintToast = document.getElementById("hintToast");
 let terminalOpen = false;
 let commandHistory = [];
 let historyIndex = -1;
+
+function wandFlash(toLight) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = document.createElement("div");
+  el.className = "wand-flash " + (toLight ? "wand-flash--light" : "wand-flash--dark");
+  el.setAttribute("aria-hidden", "true");
+  document.body.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
 
 const COMMANDS = {
   help: {
@@ -418,6 +417,32 @@ const COMMANDS = {
       } else {
         printLine("Usage: theme light | theme dark", "muted");
       }
+      return null;
+    },
+  },
+    lumos: {
+    desc: "Lumos: light mode (Nox for dark)",
+    run: () => {
+      if (document.documentElement.classList.contains("light")) {
+        printLine("Already lit. Try 'nox'.", "muted");
+        return null;
+      }
+      printLine("Lumos!", "accent");
+      wandFlash(true);
+      setTimeout(() => applyTheme(true), 300);
+      return null;
+    },
+  },
+  nox: {
+    desc: "Nox: dark mode (Lumos for light)",
+    run: () => {
+      if (!document.documentElement.classList.contains("light")) {
+        printLine("Already dark. Try 'lumos'.", "muted");
+        return null;
+      }
+      printLine("Nox.", "accent");
+      wandFlash(false);
+      setTimeout(() => applyTheme(false), 300);
       return null;
     },
   },
@@ -542,7 +567,7 @@ function runCommand(raw) {
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 200);
   } else if (name !== "clear") {
-    if (name !== "help" && name !== "theme" && name !== "sound") {
+        if (!["help", "theme", "sound", "lumos", "nox"].includes(name)) {
       setTimeout(() => closeTerminal(), 900);
     }
   }
@@ -843,26 +868,22 @@ function openVariantPreview() {
 /* ============================================================
    CHALLENGE CONTACT
 ============================================================ */
+const WEB3FORMS_KEY = "a37a9f5d-f380-4698-83e2-6455effcac00";
+
 const challengeForm = document.getElementById("challengeForm");
 const challengeInput = document.getElementById("challengeInput");
 const challengeCopy = document.getElementById("challengeCopy");
+const challengeCmd = document.getElementById("challengeCmd");
+const challengeStatus = document.getElementById("challengeStatus");
+const challengeSubmit = document.getElementById("challengeSubmit");
 
-challengeForm?.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const text = (challengeInput?.value || "").trim();
-  if (!text) {
-    challengeInput?.focus();
-    return;
-  }
-  const subject = encodeURIComponent("The hardest bug I have");
-  const body = encodeURIComponent(
-    `Hi Youssef,\n\nHere's the bug I'm stuck on:\n\n${text}\n\n---\nSent from your portfolio.`
-  );
-  window.location.href = `mailto:youssefahmedamin28@gmail.com?subject=${subject}&body=${body}`;
-});
-
-challengeCopy?.addEventListener("click", async () => {
-  const template = `## Bug Report
+const TOPICS = {
+  bug: {
+    cmd: "describe --bug",
+    subject: "Bug",
+    placeholder:
+      "Paste the stack trace. Tell me what you've tried. Be specific — that's how I'll be.",
+    template: `## Bug Report
 
 **What I expected:**
 
@@ -883,10 +904,108 @@ challengeCopy?.addEventListener("click", async () => {
 \`\`\`
 
 \`\`\`
-`;
+`,
+  },
+  project: {
+    cmd: "describe --project",
+    subject: "New project",
+    placeholder:
+      "What are you building, who is it for, and what do you need from me?",
+    template: `## Project Brief
+
+**What are we building?**
+
+
+**Who is it for?**
+
+
+**What do you need from me?**
+
+
+**Timeline:**
+
+
+**Links / references:**
+
+`,
+  },
+  hello: {
+    cmd: "say --hello",
+    subject: "Hello",
+    placeholder: "Say hi, ask a question, or tell me what's on your mind.",
+    template: null,
+  },
+};
+let currentTopic = "bug";
+
+function setStatus(text, isError) {
+  if (!challengeStatus) return;
+  challengeStatus.textContent = text;
+  challengeStatus.classList.toggle("is-error", !!isError);
+}
+
+function setTopic(key) {
+  const t = TOPICS[key];
+  if (!t) return;
+  currentTopic = key;
+  if (challengeCmd) challengeCmd.textContent = t.cmd;
+  if (challengeInput) challengeInput.placeholder = t.placeholder;
+  // .btn sets display, which beats the hidden attribute, so use style
+  if (challengeCopy) challengeCopy.style.display = t.template ? "" : "none";
+}
+
+challengeForm?.querySelectorAll('input[name="topic"]').forEach((radio) => {
+  radio.addEventListener("change", () => setTopic(radio.value));
+});
+
+challengeForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const emailField = challengeForm.elements.email;
+  const text = (challengeInput?.value || "").trim();
+
+  if (!text) {
+    setStatus("Write a message first.", true);
+    challengeInput?.focus();
+    return;
+  }
+  if (!emailField.checkValidity()) {
+    setStatus("Enter a valid email so I can reply.", true);
+    emailField.focus();
+    return;
+  }
+
+  const data = new FormData(challengeForm);
+  data.set("access_key", WEB3FORMS_KEY);
+  data.set("subject", `[Portfolio] ${TOPICS[currentTopic].subject}`);
+  data.set("from_name", "Portfolio contact form");
+
+  if (challengeSubmit) challengeSubmit.disabled = true;
+  setStatus("Sending…", false);
+
+  try {
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: data,
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || "Request failed");
+    challengeForm.reset();
+    setTopic("bug");
+    setStatus("Sent. I'll reply by email.", false);
+    showToast("Message sent", "I'll reply by email.");
+  } catch (err) {
+    setStatus("Couldn't send that. Try again, or email me directly.", true);
+  } finally {
+    if (challengeSubmit) challengeSubmit.disabled = false;
+  }
+});
+
+challengeCopy?.addEventListener("click", async () => {
+  const template = TOPICS[currentTopic].template;
+  if (!template) return;
   try {
     await navigator.clipboard.writeText(template);
-    showToast("Template copied", "Paste it anywhere, then email me.");
+    showToast("Template copied", "Paste it above, or anywhere, then send it.");
   } catch (e) {
     showToast("Copy failed", "Try again");
   }
