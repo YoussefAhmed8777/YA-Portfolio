@@ -315,15 +315,6 @@ let terminalOpen = false;
 let commandHistory = [];
 let historyIndex = -1;
 
-function wandFlash(toLight) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const el = document.createElement("div");
-  el.className = "wand-flash " + (toLight ? "wand-flash--light" : "wand-flash--dark");
-  el.setAttribute("aria-hidden", "true");
-  document.body.appendChild(el);
-  el.addEventListener("animationend", () => el.remove(), { once: true });
-}
-
 const COMMANDS = {
   help: {
     desc: "Show all commands",
@@ -417,32 +408,6 @@ const COMMANDS = {
       } else {
         printLine("Usage: theme light | theme dark", "muted");
       }
-      return null;
-    },
-  },
-    lumos: {
-    desc: "Lumos: light mode (Nox for dark)",
-    run: () => {
-      if (document.documentElement.classList.contains("light")) {
-        printLine("Already lit. Try 'nox'.", "muted");
-        return null;
-      }
-      printLine("Lumos!", "accent");
-      wandFlash(true);
-      setTimeout(() => applyTheme(true), 300);
-      return null;
-    },
-  },
-  nox: {
-    desc: "Nox: dark mode (Lumos for light)",
-    run: () => {
-      if (!document.documentElement.classList.contains("light")) {
-        printLine("Already dark. Try 'lumos'.", "muted");
-        return null;
-      }
-      printLine("Nox.", "accent");
-      wandFlash(false);
-      setTimeout(() => applyTheme(false), 300);
       return null;
     },
   },
@@ -567,7 +532,7 @@ function runCommand(raw) {
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 200);
   } else if (name !== "clear") {
-        if (!["help", "theme", "sound", "lumos", "nox"].includes(name)) {
+      if (!["help", "theme", "sound"].includes(name)) {
       setTimeout(() => closeTerminal(), 900);
     }
   }

@@ -1263,7 +1263,7 @@ body.menu-open {
 ============================================================ */
 .contact__title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 4vw, 48px);
+  font-size: clamp(36px, 4vw, 48px);
   margin-bottom: 32px;
   font-weight: 700;
   line-height: 0.95;
@@ -2752,35 +2752,4 @@ body.menu-open {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}
-
-/* Lumos / Nox wand flash */
-.wand-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  pointer-events: none;
-  opacity: 0;
-  animation: wand-flash 0.9s var(--ease) forwards;
-}
-.wand-flash--light {
-  background: radial-gradient(
-    circle at 50% 100%,
-    rgba(255, 250, 225, 0.95) 0%,
-    rgba(255, 244, 200, 0.6) 30%,
-    transparent 70%
-  );
-}
-.wand-flash--dark {
-  background: radial-gradient(
-    circle at 50% 100%,
-    rgba(10, 10, 11, 0.95) 0%,
-    rgba(10, 10, 11, 0.6) 30%,
-    transparent 70%
-  );
-}
-@keyframes wand-flash {
-  0% { opacity: 0; transform: scale(0.4); transform-origin: 50% 100%; }
-  35% { opacity: 1; }
-  100% { opacity: 0; transform: scale(1.8); transform-origin: 50% 100%; }
 }
