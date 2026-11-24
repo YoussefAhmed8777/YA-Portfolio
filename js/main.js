@@ -1307,3 +1307,44 @@ document.querySelectorAll("[data-copy]").forEach((el) => {
   // Otherwise set the correct key label
   keyEl.textContent = isMac ? "⌘K" : "Ctrl K";
 })();
+/* ============================================================
+   PROJECT CARD TYPEWRITER
+============================================================ */
+(function () {
+  const cards = document.querySelectorAll(".project");
+  if (!cards.length) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || !("IntersectionObserver" in window)) return;
+
+  function typeCard(card) {
+    const out = card.querySelector(".project__typed");
+    const full = out.dataset.text;
+    let i = 0;
+    const tick = () => {
+      out.textContent = full.slice(0, ++i);
+      if (i < full.length) setTimeout(tick, 60);
+      else setTimeout(() => card.classList.remove("project--pending"), 150);
+    };
+    tick();
+  }
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        io.unobserve(entry.target);
+        typeCard(entry.target);
+      });
+    },
+    { threshold: 0.35 },
+  );
+
+  cards.forEach((card) => {
+    card.classList.add("project--pending");
+    card
+      .querySelectorAll(".project__reveal > *")
+      .forEach((el, i) => el.style.setProperty("--i", i));
+    card.querySelector(".project__typed").textContent = "";
+    io.observe(card);
+  });
+})();

@@ -973,6 +973,37 @@ body.menu-open {
   font-family: var(--font-mono);
   font-size: 13px;
 }
+.project__typed::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  margin-left: 3px;
+  background: var(--text);
+  vertical-align: -2px;
+  animation: caret-blink 1s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.project .project__reveal > * {
+  transition:
+    opacity 0.5s var(--ease),
+    transform 0.5s var(--ease),
+    color 0.3s var(--ease);
+  transition-delay: calc(var(--i, 0) * 100ms);
+}
+.project--pending .project__reveal > * {
+  opacity: 0;
+  transform: translateY(8px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .project__typed::after {
+    animation: none;
+  }
+}
 @media (max-width: 900px) {
   .project__term {
     padding: 28px 24px;
